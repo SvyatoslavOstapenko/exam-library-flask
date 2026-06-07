@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% from 'books/form.html' import book_form %}
+
+{% block title %}Добавление книги | Электронная библиотека{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Добавление книги</h1>
+
+    {{ book_form(
+        book,
+        genres,
+        selected_genre_ids,
+        url_for('books.create'),
+        True
+    ) }}
+</div>
+{% endblock %}

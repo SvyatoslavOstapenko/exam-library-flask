@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои рецензии | Электронная библиотека{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Мои рецензии</h1>
+
+    {% if reviews %}
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Книга</th>
+                        <th>Статус</th>
+                        <th>Оценка</th>
+                        <th>Текст рецензии</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for review in reviews %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('books.show', book_id=review.book.id) }}">
+                                    {{ review.book.title }}
+                                </a>
+                            </td>
+                            <td>{{ review.status.name }}</td>
+                            <td>{{ review.rating }}</td>
+                            <td>{{ markdown_to_html(review.text) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Вы ещё не оставляли рецензии.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

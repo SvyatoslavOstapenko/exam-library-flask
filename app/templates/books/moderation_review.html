@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Рассмотрение рецензии | Электронная библиотека{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Рассмотрение рецензии</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Книга: {{ review.book.title }}
+        </div>
+
+        <div class="card-body">
+            <p><strong>Пользователь:</strong> {{ review.user.full_name }}</p>
+            <p><strong>Оценка:</strong> {{ review.rating }}</p>
+            <p><strong>Дата:</strong> {{ review.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+            <p><strong>Статус:</strong> {{ review.status.name }}</p>
+
+            <hr>
+
+            <h5>Текст рецензии</h5>
+            <div class="border rounded p-3 bg-white">
+                {{ markdown_to_html(review.text) }}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <form method="POST" action="{{ url_for('books.approve_review', review_id=review.id) }}">
+            <button class="btn btn-success" type="submit">Одобрить</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('books.reject_review', review_id=review.id) }}">
+            <button class="btn btn-danger" type="submit">Отклонить</button>
+        </form>
+
+        <a class="btn btn-secondary" href="{{ url_for('books.moderation_reviews') }}">Назад</a>
+    </div>
+</div>
+{% endblock %}

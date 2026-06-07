@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% from 'pagination.html' import render_pagination %}
+
+{% block title %}Модерация рецензий | Электронная библиотека{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Модерация рецензий</h1>
+
+    {% if reviews %}
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Книга</th>
+                        <th>Пользователь</th>
+                        <th>Дата добавления</th>
+                        <th class="text-center">Действие</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for review in reviews %}
+                        <tr>
+                            <td>{{ review.book.title }}</td>
+                            <td>{{ review.user.full_name }}</td>
+                            <td>{{ review.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td class="text-center">
+                                <a class="btn btn-sm btn-dark"
+                                   href="{{ url_for('books.moderation_review', review_id=review.id) }}">
+                                    Рассмотреть
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            {{ render_pagination(pagination, 'books.moderation_reviews') }}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Рецензий на рассмотрении нет.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% macro book_form(book, genres, selected_genre_ids, action, show_cover_field=False) %}
+<form method="POST" action="{{ action }}" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label class="form-label" for="title">Название</label>
+        <input class="form-control" type="text" id="title" name="title"
+               value="{{ book.title or '' }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="short_desc">Краткое описание</label>
+        <textarea class="form-control" id="short_desc" name="short_desc" rows="8" required>{{ book.short_desc or '' }}</textarea>
+        <div class="form-text">Можно использовать Markdown-разметку.</div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="year">Год</label>
+        <input class="form-control" type="number" id="year" name="year"
+               value="{{ book.year or '' }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="publisher">Издательство</label>
+        <input class="form-control" type="text" id="publisher" name="publisher"
+               value="{{ book.publisher or '' }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="author">Автор</label>
+        <input class="form-control" type="text" id="author" name="author"
+               value="{{ book.author or '' }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="pages">Объём в страницах</label>
+        <input class="form-control" type="number" id="pages" name="pages"
+               value="{{ book.pages or '' }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="genre_ids">Жанры</label>
+        <select class="form-select" id="genre_ids" name="genre_ids" multiple required>
+            {% for genre in genres %}
+                <option value="{{ genre.id }}"
+                        {% if genre.id in selected_genre_ids %}selected{% endif %}>
+                    {{ genre.name }}
+                </option>
+            {% endfor %}
+        </select>
+        <div class="form-text">Можно выбрать несколько жанров через Ctrl.</div>
+    </div>
+
+    {% if show_cover_field %}
+        <div class="mb-3">
+            <label class="form-label" for="cover">Обложка</label>
+            <input class="form-control" type="file" id="cover" name="cover" accept="image/*" required>
+        </div>
+    {% endif %}
+
+    <button class="btn btn-dark" type="submit">Сохранить</button>
+    <a class="btn btn-secondary" href="{{ url_for('books.index') }}">Назад</a>
+</form>
+{% endmacro %}

@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} | Электронная библиотека{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row g-4">
+        <div class="col-md-4">
+            {% if book.cover %}
+                <img src="{{ book.cover.url }}" class="img-fluid rounded border" alt="Обложка книги">
+            {% else %}
+                <div class="border rounded p-5 text-center text-muted">
+                    Нет обложки
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-8">
+            <h1>{{ book.title }}</h1>
+
+            <p class="text-muted mb-2">
+                Автор: {{ book.author }}
+            </p>
+
+            <p>
+                {% for genre in book.genres %}
+                    <span class="badge bg-secondary">{{ genre.name }}</span>
+                {% endfor %}
+            </p>
+
+            <table class="table table-bordered">
+                <tr>
+                    <th style="width: 35%;">Год</th>
+                    <td>{{ book.year }}</td>
+                </tr>
+                <tr>
+                    <th>Издательство</th>
+                    <td>{{ book.publisher }}</td>
+                </tr>
+                <tr>
+                    <th>Объём</th>
+                    <td>{{ book.pages }} стр.</td>
+                </tr>
+                <tr>
+                    <th>Средняя оценка</th>
+                    <td>
+                        {% if stats.count > 0 %}
+                            {{ "%.2f"|format(stats.avg) }}
+                        {% else %}
+                            Нет оценок
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Количество рецензий</th>
+                    <td>{{ stats.count }}</td>
+                </tr>
+            </table>
+
+            <div class="mb-3">
+                <a class="btn btn-secondary" href="{{ url_for('books.index') }}">Назад</a>
+
+                {% if current_user.is_authenticated and (current_user.has_role('Администратор') or current_user.has_role('Модератор')) %}
+                    <a class="btn btn-primary" href="{{ url_for('books.edit', book_id=book.id) }}">
+                        Редактировать
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <h3>Описание</h3>
+    <div class="border rounded p-3 bg-white mb-4">
+        {{ markdown_to_html(book.short_desc) }}
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Рецензии</h3>
+
+        {% if current_user.is_authenticated %}
+            {% if my_review %}
+                <span class="badge bg-info text-dark">Вы уже оставили рецензию</span>
+            {% else %}
+                <a class="btn btn-dark" href="{{ url_for('books.new_review', book_id=book.id) }}">
+                    Написать рецензию
+                </a>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {% if my_review %}
+        <div class="alert alert-secondary">
+            <strong>Ваша рецензия:</strong>
+            статус — {{ my_review.status.name }}, оценка — {{ my_review.rating }}
+        </div>
+    {% endif %}
+
+    {% if reviews %}
+        {% for review in reviews %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    {{ review.user.full_name }} —
+                    оценка {{ review.rating }},
+                    {{ review.created_at.strftime('%d.%m.%Y %H:%M') }}
+                </div>
+                <div class="card-body">
+                    {{ markdown_to_html(review.text) }}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            Одобренных рецензий пока нет.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
