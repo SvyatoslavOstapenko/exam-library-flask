@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% from 'pagination.html' import render_pagination %}
+
+{% block title %}Список книг | Электронная библиотека{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Список книг</h1>
+
+        {% if current_user.is_authenticated and current_user.has_role('Администратор') %}
+            <a class="btn btn-dark" href="{{ url_for('books.new') }}">Добавить книгу</a>
+        {% endif %}
+    </div>
+
+    {% if books %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Название</th>
+                        <th>Жанры</th>
+                        <th>Год</th>
+                        <th>Средняя оценка</th>
+                        <th>Рецензии</th>
+                        <th class="text-center">Действия</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for book in books %}
+                        {% set stat = stats.get(book.id) %}
+                        <tr>
+                            <td>
+                                <strong>{{ book.title }}</strong><br>
+                                <span class="text-muted">{{ book.author }}</span>
+                            </td>
+
+                            <td>
+                                {% for genre in book.genres %}
+                                    <span class="badge bg-secondary">{{ genre.name }}</span>
+                                {% endfor %}
+                            </td>
+
+                            <td>{{ book.year }}</td>
+
+                            <td>
+                                {% if stat and stat.count > 0 %}
+                                    {{ "%.2f"|format(stat.avg) }}
+                                {% else %}
+                                    Нет оценок
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ stat.count if stat else 0 }}
+                            </td>
+
+                            <td class="text-center">
+                                <a class="btn btn-sm btn-outline-dark"
+                                   href="{{ url_for('books.show', book_id=book.id) }}">
+                                    Просмотр
+                                </a>
+
+                                {% if current_user.is_authenticated and (current_user.has_role('Администратор') or current_user.has_role('Модератор')) %}
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="{{ url_for('books.edit', book_id=book.id) }}">
+                                        Редактировать
+                                    </a>
+                                {% endif %}
+
+                                {% if current_user.is_authenticated and current_user.has_role('Администратор') %}
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteBookModal{{ book.id }}">
+                                        Удалить
+                                    </button>
+
+                                    <div class="modal fade" id="deleteBookModal{{ book.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content text-start">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Удаление книги</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+
+                                                <div class="modal-body">
+                                                    Вы уверены, что хотите удалить книгу «{{ book.title }}»?
+                                                </div>
+
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                        Нет
+                                                    </button>
+
+                                                    <form method="POST" action="{{ url_for('books.delete', book_id=book.id) }}">
+                                                        <button type="submit" class="btn btn-danger">
+                                                            Да
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            {{ render_pagination(pagination, 'books.index') }}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            В библиотеке пока нет книг.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

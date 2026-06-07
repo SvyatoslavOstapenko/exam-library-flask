@@ -1,8 +1,8 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, send_from_directory, redirect, url_for
 from flask_migrate import Migrate
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import db, Book, Cover
+from models import db, Cover
 from auth import bp as auth_bp, init_login_manager
 from books import bp as books_bp
 
@@ -33,19 +33,13 @@ app.register_blueprint(books_bp)
 
 @app.route('/')
 def index():
-    books = db.session.execute(
-        db.select(Book).order_by(Book.year.desc())
-    ).scalars()
-
-    return render_template(
-        'index.html',
-        books=books,
-    )
+    return redirect(url_for('books.index'))
 
 
 @app.route('/covers/<int:cover_id>')
 def cover(cover_id):
     cover_obj = db.get_or_404(Cover, cover_id)
+
     return send_from_directory(
         app.config['UPLOAD_FOLDER'],
         cover_obj.storage_filename
