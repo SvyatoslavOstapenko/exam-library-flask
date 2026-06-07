@@ -1,48 +1,64 @@
 import os
-from typing import Optional, Union, List
 from datetime import datetime
+from typing import Optional, List
+
 import sqlalchemy as sa
-from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin
 from flask import url_for
+from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, DateTime, Text, Integer, MetaData
+from sqlalchemy import DateTime, ForeignKey, Integer, MetaData, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 class Base(DeclarativeBase):
-  metadata = MetaData(naming_convention={
-        "ix": 'ix_%(column_0_label)s',
+    metadata = MetaData(naming_convention={
+        "ix": "ix_%(column_0_label)s",
         "uq": "uq_%(table_name)s_%(column_0_name)s",
         "ck": "ck_%(table_name)s_%(constraint_name)s",
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-        "pk": "pk_%(table_name)s"
+        "pk": "pk_%(table_name)s",
     })
+
 
 db = SQLAlchemy(model_class=Base)
 
-class Category(Base):
-    __tablename__ = 'categories'
 
-    id = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("categories.id"))
+book_genres = sa.Table(
+    "book_genres",
+    Base.metadata,
+    sa.Column("book_id", sa.ForeignKey("books.id", ondelete="CASCADE"), primary_key=True),
+    sa.Column("genre_id", sa.ForeignKey("genres.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+
+    users: Mapped[List["User"]] = relationship(back_populates="role")
 
     def __repr__(self):
-        return '<Category %r>' % self.name
+        return f"<Role {self.name}>"
 
 
 class User(Base, UserMixin):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    first_name: Mapped[str] = mapped_column(String(100))
-    last_name: Mapped[str] = mapped_column(String(100))
+    login: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     middle_name: Mapped[Optional[str]] = mapped_column(String(100))
-    login: Mapped[str] = mapped_column(String(100), unique=True)
-    password_hash: Mapped[str] = mapped_column(String(200))
-    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    role: Mapped["Role"] = relationship(back_populates="users", lazy=False)
+    reviews: Mapped[List["Review"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -52,73 +68,119 @@ class User(Base, UserMixin):
 
     @property
     def full_name(self):
-        return ' '.join([self.last_name, self.first_name, self.middle_name or ''])
+        parts = [self.last_name, self.first_name, self.middle_name or ""]
+        return " ".join(part for part in parts if part).strip()
+
+    def has_role(self, *roles):
+        return self.role and self.role.name in roles
 
     def __repr__(self):
-        return '<User %r>' % self.login
+        return f"<User {self.login}>"
 
-class Course(Base):
-    __tablename__ = 'courses'
+
+class Genre(Base):
+    __tablename__ = "genres"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-    short_desc: Mapped[str] = mapped_column(Text)
-    full_desc: Mapped[str] = mapped_column(Text)
-    rating_sum: Mapped[int] = mapped_column(default=0)
-    rating_num: Mapped[int] = mapped_column(default=0)
-    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    background_image_id: Mapped[str] = mapped_column(ForeignKey("images.id"))
-    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    author: Mapped["User"] = relationship()
-    category: Mapped["Category"] = relationship(lazy=False)
-    bg_image: Mapped["Image"] = relationship()
+    books: Mapped[List["Book"]] = relationship(
+        secondary=book_genres,
+        back_populates="genres",
+    )
 
     def __repr__(self):
-        return '<Course %r>' % self.name
+        return f"<Genre {self.name}>"
 
-    @property
-    def rating(self):
-        if self.rating_num > 0:
-            return self.rating_sum / self.rating_num
-        return 0
 
-class Review(Base):
-    __tablename__ = 'reviews'
+class Book(Base):
+    __tablename__ = "books"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    rating: Mapped[int] = mapped_column(Integer, nullable=False)
-    text: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    short_desc: Mapped[str] = mapped_column(Text, nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    publisher: Mapped[str] = mapped_column(String(200), nullable=False)
+    author: Mapped[str] = mapped_column(String(200), nullable=False)
+    pages: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
-    course: Mapped["Course"] = relationship()
-    user: Mapped["User"] = relationship()
+    genres: Mapped[List["Genre"]] = relationship(
+        secondary=book_genres,
+        back_populates="books",
+        lazy=False,
+    )
+
+    cover: Mapped[Optional["Cover"]] = relationship(
+        back_populates="book",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
+    reviews: Mapped[List["Review"]] = relationship(
+        back_populates="book",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def __repr__(self):
-        return f"<Review {self.id} rating={self.rating}>"
+        return f"<Book {self.title}>"
 
-class Image(db.Model):
-    __tablename__ = 'images'
 
-    id: Mapped[str] = mapped_column(String(100), primary_key=True)
-    file_name: Mapped[str] = mapped_column(String(100))
-    mime_type: Mapped[str] = mapped_column(String(100))
-    md5_hash: Mapped[str] = mapped_column(String(100), unique=True)
-    object_id: Mapped[Optional[int]]
-    object_type: Mapped[Optional[str]] = mapped_column(String(100))
-    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+class Cover(Base):
+    __tablename__ = "covers"
 
-    def __repr__(self):
-        return '<Image %r>' % self.file_name
+    id: Mapped[int] = mapped_column(primary_key=True)
+    file_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    md5_hash: Mapped[str] = mapped_column(String(100), nullable=False)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
+
+    book: Mapped["Book"] = relationship(back_populates="cover")
 
     @property
     def storage_filename(self):
         _, ext = os.path.splitext(self.file_name)
-        return self.id + ext
+        return self.md5_hash + ext
 
     @property
     def url(self):
-        return url_for('image', image_id=self.id)
+        return url_for("cover", cover_id=self.id)
+
+    def __repr__(self):
+        return f"<Cover {self.file_name}>"
+
+
+class ReviewStatus(Base):
+    __tablename__ = "review_statuses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+
+    reviews: Mapped[List["Review"]] = relationship(back_populates="status")
+
+    def __repr__(self):
+        return f"<ReviewStatus {self.name}>"
+
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    status_id: Mapped[int] = mapped_column(ForeignKey("review_statuses.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    book: Mapped["Book"] = relationship(back_populates="reviews")
+    user: Mapped["User"] = relationship(back_populates="reviews", lazy=False)
+    status: Mapped["ReviewStatus"] = relationship(back_populates="reviews", lazy=False)
+
+    __table_args__ = (
+        sa.UniqueConstraint("book_id", "user_id", name="uq_reviews_book_user"),
+    )
+
+    def __repr__(self):
+        return f"<Review {self.id} rating={self.rating}>"
