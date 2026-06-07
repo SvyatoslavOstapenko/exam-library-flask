@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero">
+  <div class="container text-center">
+    <h1 class="mb-3">Образовательный портал</h1>
+    <p class="mb-4">
+      Мы создаем и продвигаем технологии онлайн-образования как эффективный образовательный инструмент, который будет
+      способствовать повышению доступности и качества образования.
+    </p>
+
+    <form class="search-form" action="{{ url_for('courses.index') }}" method="get">
+      <div class="d-flex justify-content-center align-items-center flex-wrap gap-2">
+        <input
+          type="text"
+          class="form-control"
+          style="max-width: 520px;"
+          name="name"
+          placeholder="Название курса"
+          value="{{ request.args.get('name', '') }}"
+        />
+
+        <select class="form-select" style="max-width: 360px;" name="category_ids">
+          <option value="">Выберите категорию</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+
+        <button class="btn btn-dark" type="submit" style="min-width: 140px;">Найти</button>
+      </div>
+    </form>
+
+    <!-- КНОПКИ НАВИГАЦИИ -->
+    <div class="text-center mt-4">
+      <a class="btn btn-outline-dark me-2" href="{{ url_for('courses.index') }}">Каталог курсов</a>
+
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-dark" href="{{ url_for('courses.new') }}">Создать курс</a>
+      {% else %}
+        <a class="btn btn-dark" href="{{ url_for('auth.login', next=url_for('courses.new')) }}">
+          Войти, чтобы создать курс
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
