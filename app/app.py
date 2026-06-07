@@ -1,6 +1,7 @@
 from flask import Flask, send_from_directory, redirect, url_for
 from flask_migrate import Migrate
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db, Cover
 from auth import bp as auth_bp, init_login_manager
@@ -11,6 +12,7 @@ app = Flask(__name__)
 application = app
 
 app.config.from_pyfile('config.py')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_prefix=1)
 
 db.init_app(app)
 migrate = Migrate(app, db)
